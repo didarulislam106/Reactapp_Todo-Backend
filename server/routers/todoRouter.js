@@ -24,17 +24,22 @@ router.get('/', (req, res, next) => {
     });
 });
 
-router.post('/create',auth,(req, res, next) => {
-    const { description } = req.body;
-    if (!description) {
-        return res.status(400).json({ error: 'Description is required' });
+router.post('/create',auth, async (req, res, next) => {
+    try {
+        const { description } = req.body;
+        if (!description) {
+            return res.status(400).json({ error: 'Description is required' });
+        }
+        // Create the task in the database
+        const newTask = await createTask({ description });
+        // Return the new task with 'id' and 'description'
+        res.json({
+            id: newTask.id,
+            description: newTask.description
+        });
+    } catch (error) {
+        next(error);
     }
-    pool.query('INSERT INTO task (description) VALUES ($1) RETURNING *', 
-        [description], 
-        (error, result) => {
-            if (error) return next(error);
-            return res.status(200).json({id: result.rows[0].id});  // Changed from 201 to 200
-    });
 });
 
 router.delete('/delete/:id', (req, res) => {

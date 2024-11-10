@@ -3,6 +3,18 @@ import { expect } from 'chai';
 import { initializeTestDB, insertTestUser, getToken } from './helper/test.js';
 
 const base_url = 'http://localhost:3001/';
+const MAX_RETRIES = 3;
+
+async function fetchWithRetry(url, options, retries = MAX_RETRIES) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            return response;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+        }
+    }
+}
 
 before(() => {
     initializeTestDB();
@@ -11,7 +23,7 @@ before(() => {
 describe('API Tests', () => {
     describe('GET Tasks', () => {
         it('should return all tasks', async () => {
-            const response = await fetch(base_url);
+            const response = await fetchWithRetry(base_url);
             const data = await response.json();
 
             expect(response.status).to.equal(200);
@@ -21,7 +33,7 @@ describe('API Tests', () => {
     });
 
     describe('POST Task', () => {
-        const email = 'post@foo.com';
+        const email = 'post2@foo.com';
         const password = 'post123';
         let token;
 
@@ -31,7 +43,7 @@ describe('API Tests', () => {
         });
 
         it('should post a task', async () => {
-            const response = await fetch(base_url + 'create', {
+            const response = await fetchWithRetry(base_url + 'create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -47,7 +59,7 @@ describe('API Tests', () => {
         });
 
         it('should not post a task without description', async () => {
-            const response = await fetch(base_url + 'create', {
+            const response = await fetchWithRetry(base_url + 'create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,7 +77,7 @@ describe('API Tests', () => {
 
     describe('DELETE Task', () => {
         it('should delete a task', async () => {
-            const response = await fetch(base_url + 'delete/1', {
+            const response = await fetchWithRetry(base_url + 'delete/1', {
                 method: 'DELETE',
             });
             const data = await response.json();
@@ -76,7 +88,7 @@ describe('API Tests', () => {
         });
 
         it('should not delete a task with SQL injection', async () => {
-            const response = await fetch(base_url + '/delete/id=0 or id > 0', {
+            const response = await fetchWithRetry(base_url + '/delete/id=0 or id > 0', {
                 method: 'delete',
             });
             const data = await response.json();
@@ -94,12 +106,12 @@ describe('API Tests', () => {
         });
 
         const testData = {
-            email: 'test1@example.com',
+            email: 'test12@example.com',
             password: 'register123'
         };
 
         it('should register with valid email and password', async () => {
-            const response = await fetch(base_url + 'user/register', {
+            const response = await fetchWithRetry(base_url + 'user/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(testData),
@@ -117,7 +129,7 @@ describe('API Tests', () => {
     });
 
     describe('POST /login', () => {
-        const email = 'test1@example.com';
+        const email = 'test12@example.com';
         const password = 'register123';
 
         before(async () => {
@@ -125,16 +137,21 @@ describe('API Tests', () => {
         });
 
         it('should login with valid credentials', async () => {
-            const response = await fetch(base_url + 'user/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 'email': email, 'password': password }),
-            });
-            const data = await response.json();
+            try {
+                const response = await fetchWithRetry(base_url + 'user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 'email': email, 'password': password }),
+                });
+                const data = await response.json();
 
-            expect(response.status).to.equal(200, data.error);
-            expect(data).to.be.an('object');
-            expect(data).to.include.all.keys('id', 'email', 'token');
+                expect(response.status).to.equal(200, data.error);
+                expect(data).to.be.an('object');
+                expect(data).to.include.all.keys('id', 'email', 'token');
+            } catch (error) {
+                console.error('Login failed:', error);
+                throw error;
+            }
         });
 
     })

@@ -4,10 +4,9 @@ import dotenv from 'dotenv';
 import todoRouter from './routers/todoRouter.js';
 import userRouter from './routers/userRouter.js';
 
-
 dotenv.config();
 
-const port = process.env.PORT;
+const port = process.env.PORT || 3001;
 
 const app = express();
 app.use(cors());

@@ -104,4 +104,35 @@ router.post('/login', async (req, res, next) => {
     }
 })
 
-export default router;  
+router.post('/register', async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        // Register the user in the database
+        const newUser = await registerUser({ email, password });
+        // Return the new user's 'id' and 'email'
+        res.status(201).json({
+            id: newUser.id,
+            email: newUser.email
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.post('/login', async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        // Authenticate the user and generate a token
+        const user = await authenticateUser({ email, password });
+        // Return the user's 'id', 'email', and 'token'
+        res.json({
+            id: user.id,
+            email: user.email,
+            token: user.token
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
